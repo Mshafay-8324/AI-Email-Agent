@@ -1,0 +1,442 @@
+{
+  "name": "AI Email Assistant Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "aa8f39f9-d35a-4f1d-9c9c-a5757999a3fb",
+              "name": "subject",
+              "value": "={{ $json.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "d9c4ef58-1625-42a6-95fc-8c530fe28204",
+              "name": "body",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "8e45b8f2-f3f2-45c5-9e06-f6316c0d2597",
+              "name": "sender_email",
+              "value": "={{ $json.from.value[0].address }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8751e6ed-9419-46fb-b0d5-c7a70636fc90",
+      "name": "Edit Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        496,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze the following email.\\n\\nSubject:\\n{{ $json.subject }}\\n\\nBody:\\n{{ $json.body }}",
+        "options": {
+          "systemMessage": "You are an AI Email Assistant Agent responsible for analyzing incoming customer emails.\n\nYour job is to classify each email, determine its priority, summarize it, and draft a professional reply.\n\nYou MUST follow the rules below exactly.\n\n========================\nCATEGORY RULES\n========================\n\nChoose exactly ONE category:\n\nBilling:\nUse for refunds, charges, payments, invoices, subscriptions, pricing, or payment-related issues.\n\nTechnical Support:\nUse for software problems, application bugs, errors, crashes, broken features, or system functionality problems.\n\nDo NOT use Technical Support for account security, unauthorized access, password changes, or compromised accounts. Those belong to Account.\n\nAccount:\nUse for account access, login problems, password changes, unauthorized account access, compromised accounts, account security issues, profile information, account status, or other issues primarily involving the customer's account.\n\nIMPORTANT:\nIf an email mentions a compromised account, unauthorized access, stolen credentials, password changes, or inability to access an account because of a security issue, classify it as Account, NOT Technical Support.\n\nSales:\nUse for product inquiries, purchasing questions, pricing inquiries from potential customers, or requests to buy a product/service.\n\nComplaint:\nUse when the customer is explicitly complaining about poor service, dissatisfaction, misconduct, or a negative experience.\n\nGeneral Inquiry:\nUse for general questions that do not clearly belong to another category.\n\nOther:\nUse only when none of the above categories reasonably apply.\n\n========================\nPRIORITY RULES\n========================\n\nChoose exactly ONE priority: Low, Medium, or High.\n\nHIGH priority:\nUse High ONLY when the email indicates:\n- Security or account compromise\n- Fraud or unauthorized transactions\n- Legal threats or legal matters\n- Major service outage\n- Data loss\n- A serious business-critical problem\n- An urgent issue that clearly requires immediate attention\n\nMEDIUM priority:\nUse Medium when:\n- The customer needs assistance but there is no immediate danger\n- The issue affects the customer's ability to use a service\n- The customer is requesting a refund or billing correction\n- The issue requires investigation or action by support\n- The request is important but not urgent\n\nLOW priority:\nUse Low when:\n- The email is a general question\n- The request is informational\n- The customer is asking about a product or service without an urgent problem\n- No significant impact or urgency is described\n\nIMPORTANT:\nA refund request by itself is NOT High priority.\nA billing issue by itself is NOT High priority.\nA complaint by itself is NOT High priority.\n\nIf the email does not clearly indicate an urgent or serious situation, prefer Medium or Low rather than High.\n\n========================\nSUMMARY RULES\n========================\n\nWrite a concise summary of the customer's main request.\n\nDo not add information that is not present in the email.\n\n========================\nREPLY RULES\n========================\n\nWrite a professional, polite, helpful reply.\n\nDo not invent:\n- Company policies\n- Refund policies\n- Refund approval\n- Processing times\n- Guarantees\n- Discounts\n- Compensation\n- Order information\n- Customer information\n\nIf information is required to resolve the request, politely ask the customer for it.\n\n========================\nOUTPUT FORMAT\n========================\n\nYour response MUST begin with exactly one of:\n\nPRIORITY: Low\nPRIORITY: Medium\nPRIORITY: High\n\nThen provide exactly these fields:\n\nCategory:\nSummary:\nReply:\n\nDo not put anything before the PRIORITY line.\n\nDo not include Markdown headings.\n\nDo not include explanations of your reasoning.\n\nDo not include additional fields.\n\nDo not change the field names.\n\n========================\nFINAL REQUIREMENT\n========================\n\nBefore responding, verify that:\n\n1. Priority is exactly Low, Medium, or High.\n2. Category is exactly one of the allowed categories.\n3. Summary is concise.\n4. Reply is professional.\n5. No unsupported information has been invented.\n6. The first line is exactly the required PRIORITY line."
+        }
+      },
+      "id": "d63efbc3-fcb4-493b-a717-905f139f91da",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        768,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "model": "llama3.2:3b",
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        768,
+        896
+      ],
+      "id": "903a3767-ffc3-44bd-aa65-4df59d867987",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "JC9zuWRBl4hf54Hn",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = String($json.output ?? '').replace(/\\r/g, '');\n\nconst priorityMatch = text.match(/^\\s*PRIORITY:\\s*(Low|Medium|High)\\s*$/im);\nconst categoryMatch = text.match(/^\\s*CATEGORY:\\s*(Billing|Technical Support|Account|Sales|Complaint|General Inquiry|Other)\\s*$/im)\n  || text.match(/^\\s*Category:\\s*(Billing|Technical Support|Account|Sales|Complaint|General Inquiry|Other)\\s*$/im);\n\nconst summaryMatch = text.match(/^\\s*SUMMARY:\\s*(.*?)\\s*(?=^\\s*REPLY:\\s*$)/ims)\n  || text.match(/^\\s*Summary:\\s*(.*?)\\s*(?=^\\s*Reply:\\s*$)/ims);\n\nconst replyMatch = text.match(/^\\s*REPLY:\\s*([\\s\\S]*)$/im)\n  || text.match(/^\\s*Reply:\\s*([\\s\\S]*)$/im);\n\nconst priority = priorityMatch?.[1] ?? 'Unknown';\nconst category = categoryMatch?.[1]?.trim() ?? 'Unknown';\nconst summary = summaryMatch?.[1]?.trim() ?? 'Unknown';\nconst reply = replyMatch?.[1]?.trim() ?? '';\n\nconst valid =\n  ['Low', 'Medium', 'High'].includes(priority) &&\n  ['Billing', 'Technical Support', 'Account', 'Sales', 'Complaint', 'General Inquiry', 'Other'].includes(category) &&\n  summary !== 'Unknown' &&\n  reply.length > 0;\n\nreturn [{\n  json: {\n    subject: $json.subject ?? '',\n    body: $json.body ?? '',\n    sender_email: $json.sender_email ?? '',\n    ai_output: text,\n    priority,\n    category,\n    summary,\n    reply,\n    valid_format: valid\n  }\n}];"
+      },
+      "id": "49cabe48-6607-44e4-b656-d406de404b89",
+      "name": "Parse AI Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1088,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "22ffeda6-78fc-4436-a4c1-87485bee6665",
+              "leftValue": "={{ $json.priority }}",
+              "rightValue": "High",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a22b61d6-db34-45cb-a3ac-66807a3b6918",
+      "name": "High Priority?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1264,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5b752340-aa52-4c31-8f01-eb69eef6b0e9",
+              "name": "priority_status",
+              "value": "URGENT",
+              "type": "string"
+            },
+            {
+              "id": "d826f977-a378-4e0a-aecc-b9fed72654f2",
+              "name": "action",
+              "value": "Escalate immediately",
+              "type": "string"
+            },
+            {
+              "id": "8bea1085-8f25-4def-bbbd-aa23d0f00b3f",
+              "name": "status",
+              "value": "High Priority",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "787618ef-d701-4577-b173-44d2a1700b65",
+      "name": "High Priority Action",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1520,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "64043644-10ab-454b-84c4-6640f46755c8",
+              "name": "priority_status",
+              "value": "NORMAL",
+              "type": "string"
+            },
+            {
+              "id": "6ebf7179-0ed0-4ef1-8026-aba128cfbe6b",
+              "name": "action",
+              "value": "Process normally",
+              "type": "string"
+            },
+            {
+              "id": "31230114-773a-45f8-9e52-e2fcaf614e19",
+              "name": "status",
+              "value": "Normal Priority",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "8b433cf8-281f-4a77-8f12-bb68c849429f",
+      "name": "Normal Priority Action",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1520,
+        752
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $json;\n\nreturn [{\n  json: {\n    success: item.valid_format !== false,\n    processed_at: new Date().toISOString(),\n    subject: $('Edit Fields').first().json.subject || '',\n    sender_email: item.sender_email || '',\n    priority: item.priority || 'Unknown',\n    category: item.category || 'Unknown',\n    summary: item.summary || 'Unknown',\n    reply: item.reply || '',\n    priority_status: item.priority_status || 'NORMAL',\n    action: item.action || 'Review manually',\n    status: item.status || 'Needs Review',\n    needs_escalation: item.priority === 'High',\n    ai_output: item.ai_output || ''\n  }\n}];"
+      },
+      "id": "9fecba7b-6959-4ab8-a423-a510d8957ed7",
+      "name": "Finalize Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2016,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "e040fb54-f6cd-440c-bc3b-8a363448b23d",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        2464,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        32,
+        640
+      ],
+      "id": "1cc7da15-76ec-4ec8-a176-419ebcc70a2c",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "D9zQs4bkVEYBtCnI",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{$json.id}}",
+        "simple": false,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        256,
+        640
+      ],
+      "id": "f395f153-3e55-4d3b-9c23-232f3eb87407",
+      "name": "Get a message",
+      "webhookId": "921c2c52-a4bb-4e5d-8521-69b5b57cf7ad",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "D9zQs4bkVEYBtCnI",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Get a message').item.json.id }}",
+        "message": "={{ $json.reply }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2224,
+        640
+      ],
+      "id": "4382985c-3695-414a-b1be-adf98d84b7fd",
+      "name": "Reply to a message",
+      "webhookId": "d02a5341-985a-492a-b829-2c6b3059199a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "D9zQs4bkVEYBtCnI",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Output": {
+      "main": [
+        [
+          {
+            "node": "High Priority?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "High Priority?": {
+      "main": [
+        [
+          {
+            "node": "High Priority Action",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Normal Priority Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "High Priority Action": {
+      "main": [
+        [
+          {
+            "node": "Finalize Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normal Priority Action": {
+      "main": [
+        [
+          {
+            "node": "Finalize Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Finalize Result": {
+      "main": [
+        [
+          {
+            "node": "Reply to a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a message": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply to a message": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "20f53ba2-bbea-4da6-ac07-dd3af4911b21",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "25b023dd50ac7c6090f0a51bf5e2daa5acd6fc15b6aca0cede6191b697fc156d"
+  },
+  "id": "DU22y0aRxxlPYBBb",
+  "tags": []
+}
